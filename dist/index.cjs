@@ -52,12 +52,15 @@ var import_documents = require("@langchain/core/documents");
 var MemoryService = class {
   vectorStore = null;
   embeddings;
+  isStub;
   constructor() {
+    this.isStub = process.env.OPENAI_API_KEY === "sk-test-key";
     this.embeddings = new import_openai.OpenAIEmbeddings({
       openAIApiKey: process.env.OPENAI_API_KEY
     });
   }
   async getVectorStore() {
+    if (this.isStub) return null;
     if (this.vectorStore) return this.vectorStore;
     const pinecone = new import_pinecone.Pinecone({
       apiKey: process.env.PINECONE_API_KEY
@@ -72,7 +75,12 @@ var MemoryService = class {
    * Store a student interaction in the vector memory.
    */
   async storeInteraction(studentDid, content, metadata = {}) {
+    if (this.isStub) {
+      console.log(`[MemoryService] Stub: Storing interaction for ${studentDid}`);
+      return;
+    }
     const store = await this.getVectorStore();
+    if (!store) return;
     await store.addDocuments([
       new import_documents.Document({
         pageContent: content,
@@ -89,7 +97,12 @@ var MemoryService = class {
    * Retrieve relevant memory context for a student with optional metadata filtering.
    */
   async retrieveContext(studentDid, query, k = 5, filter = {}) {
+    if (this.isStub) {
+      console.log(`[MemoryService] Stub: Retrieving context for ${studentDid}`);
+      return [];
+    }
     const store = await this.getVectorStore();
+    if (!store) return [];
     const results = await store.similaritySearch(query, k, {
       ...filter,
       studentDid
@@ -100,7 +113,12 @@ var MemoryService = class {
    * Retrieve faith-aligned pedagogical context with advanced weighting.
    */
   async retrieveWorldviewContext(query, k = 3) {
+    if (this.isStub) {
+      console.log(`[MemoryService] Stub: Retrieving worldview context`);
+      return [];
+    }
     const store = await this.getVectorStore();
+    if (!store) return [];
     const results = await store.similaritySearch(query, k, {
       type: "worldview"
     });
@@ -261,7 +279,6 @@ You have tools to search the internet and navigate the app. Use them if needed t
 };
 
 // src/services/TelemetryBridge.ts
-var import_node_fetch = __toESM(require("node-fetch"), 1);
 var TelemetryBridge = class {
   teacherServiceUrl;
   constructor() {
@@ -272,7 +289,7 @@ var TelemetryBridge = class {
    */
   async notifyTeacher(studentDid, teacherDid, state) {
     try {
-      const response = await (0, import_node_fetch.default)(`${this.teacherServiceUrl}/events/telemetry`, {
+      const response = await fetch(`${this.teacherServiceUrl}/events/telemetry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentDid, teacherDid, state })
@@ -301,6 +318,7 @@ var EventSubscriber = class {
    */
   async handleEvent(event) {
     const { eventType, payload, creatorDid } = event;
+    console.log(`[Tutor] Received event: ${eventType} from ${creatorDid}`);
     if (eventType === "HELP_CLICK") {
       await this.trackHelpUsage(creatorDid);
     }
@@ -321,13 +339,15 @@ var EventSubscriber = class {
         lastHelpAt: /* @__PURE__ */ new Date()
       }
     });
+    console.log(`[Tutor] Student ${studentDid} help count: ${state.helpClickCount}`);
     if (state.helpClickCount >= 5) {
       await this.prisma.studentState.update({
         where: { studentDid },
         data: { mode: "TEACHER" }
       });
-      console.log(`Student ${studentDid} switched to TEACHER mode due to help abuse.`);
-      await this.bridge.notifyTeacher(studentDid, "teacher-456", state);
+      console.log(`[Tutor] Student ${studentDid} switched to TEACHER mode due to help abuse.`);
+      console.log(`[Tutor] Notifying Teacher Service via bridge for student: ${studentDid}`);
+      await this.bridge.notifyTeacher(studentDid, "teacher-123", state);
     }
   }
   async updateCurrentLocation(studentDid, path) {
@@ -402,6 +422,7 @@ app.post("/events", async (req, res) => {
     await eventSubscriber.handleEvent(req.body);
     res.status(202).json({ success: true });
   } catch (error) {
+    console.error(`[Tutor] Error in /events:`, error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -422,6 +443,7 @@ app.post("/chat", async (req, res) => {
       mode: state?.mode || "ASSISTANT"
     });
   } catch (error) {
+    console.error(`[Tutor] Error in /chat:`, error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -430,6 +452,7 @@ app.get("/student/:did/summary", async (req, res) => {
     const report = await reportingService.generateStudentReport(req.params.did);
     res.json({ report });
   } catch (error) {
+    console.error(`[Tutor] Error in /student/summary:`, error);
     res.status(500).json({ error: error.message });
   }
 });

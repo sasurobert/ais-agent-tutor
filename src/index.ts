@@ -46,6 +46,7 @@ app.post('/events', async (req: Request, res: Response) => {
         await eventSubscriber.handleEvent(req.body);
         res.status(202).json({ success: true });
     } catch (error: any) {
+        console.error(`[Tutor] Error in /events:`, error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -75,6 +76,7 @@ app.post('/chat', async (req: Request, res: Response) => {
             mode: state?.mode || 'ASSISTANT'
         });
     } catch (error: any) {
+        console.error(`[Tutor] Error in /chat:`, error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -87,6 +89,7 @@ app.get('/student/:did/summary', async (req: Request, res: Response) => {
         const report = await reportingService.generateStudentReport(req.params.did);
         res.json({ report });
     } catch (error: any) {
+        console.error(`[Tutor] Error in /student/summary:`, error);
         res.status(500).json({ error: error.message });
     }
 });

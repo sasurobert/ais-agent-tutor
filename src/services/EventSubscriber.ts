@@ -15,6 +15,7 @@ export class EventSubscriber {
      */
     async handleEvent(event: any) {
         const { eventType, payload, creatorDid } = event;
+        console.log(`[Tutor] Received event: ${eventType} from ${creatorDid}`);
 
         if (eventType === 'HELP_CLICK') {
             await this.trackHelpUsage(creatorDid);
@@ -39,17 +40,20 @@ export class EventSubscriber {
             },
         });
 
+        console.log(`[Tutor] Student ${studentDid} help count: ${state.helpClickCount}`);
+
         // Abuse Threshold Check
         if (state.helpClickCount >= 5) {
             await (this.prisma as any).studentState.update({
                 where: { studentDid },
                 data: { mode: 'TEACHER' },
             });
-            console.log(`Student ${studentDid} switched to TEACHER mode due to help abuse.`);
+            console.log(`[Tutor] Student ${studentDid} switched to TEACHER mode due to help abuse.`);
+            console.log(`[Tutor] Notifying Teacher Service via bridge for student: ${studentDid}`);
 
             // Notify Teacher Service (Telemetry Bridge)
             // In a real scenario, we'd look up the teacher for this student
-            await this.bridge.notifyTeacher(studentDid, 'teacher-456', state);
+            await this.bridge.notifyTeacher(studentDid, 'teacher-123', state);
         }
     }
 

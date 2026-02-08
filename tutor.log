@@ -1,6 +1,24 @@
-
-> ais-agent-tutor@1.0.0 dev
-> tsx watch src/index.ts
-
-[dotenv@17.2.4] injecting env (6) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.4] injecting env (6) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
 PersonalAITutor Service running on port 3006
+[0mGET /health [32m200[0m 2.740 ms - 48[0m
+[MemoryService] Stub: Retrieving context for did:student:1770570916141
+[MemoryService] Stub: Retrieving worldview context
+[0mPOST /chat [32m200[0m 108.689 ms - 174[0m
+[Tutor] Received event: HELP_CLICK from did:student:multi:1770570916348
+[Tutor] Student did:student:multi:1770570916348 help count: 1
+[0mPOST /events [32m202[0m 12.636 ms - 16[0m
+[Tutor] Received event: HELP_CLICK from did:student:multi:1770570916348
+[Tutor] Student did:student:multi:1770570916348 help count: 2
+[0mPOST /events [32m202[0m 3.627 ms - 16[0m
+[Tutor] Received event: HELP_CLICK from did:student:multi:1770570916348
+[Tutor] Student did:student:multi:1770570916348 help count: 3
+[0mPOST /events [32m202[0m 2.210 ms - 16[0m
+[Tutor] Received event: HELP_CLICK from did:student:multi:1770570916348
+[Tutor] Student did:student:multi:1770570916348 help count: 4
+[0mPOST /events [32m202[0m 2.188 ms - 16[0m
+[Tutor] Received event: HELP_CLICK from did:student:multi:1770570916348
+[Tutor] Student did:student:multi:1770570916348 help count: 5
+[Tutor] Student did:student:multi:1770570916348 switched to TEACHER mode due to help abuse.
+[Tutor] Notifying Teacher Service via bridge for student: did:student:multi:1770570916348
+Successfully notified Teacher Service of event for did:student:multi:1770570916348
+[0mPOST /events [32m202[0m 56.488 ms - 16[0m

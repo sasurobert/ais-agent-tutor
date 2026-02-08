@@ -1,5 +1,3 @@
-import fetch from 'node-fetch';
-
 export class TelemetryBridge {
     private teacherServiceUrl: string;
 
@@ -12,6 +10,7 @@ export class TelemetryBridge {
      */
     async notifyTeacher(studentDid: string, teacherDid: string, state: any) {
         try {
+            // Using native fetch (Node 18+) to avoid CJS/ESM bundling issues with node-fetch
             const response = await fetch(`${this.teacherServiceUrl}/events/telemetry`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

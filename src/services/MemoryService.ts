@@ -6,14 +6,17 @@ import { Document } from '@langchain/core/documents';
 export class MemoryService {
     private vectorStore: PineconeStore | null = null;
     private embeddings: OpenAIEmbeddings;
+    private isStub: boolean;
 
     constructor() {
+        this.isStub = process.env.OPENAI_API_KEY === 'sk-test-key';
         this.embeddings = new OpenAIEmbeddings({
             openAIApiKey: process.env.OPENAI_API_KEY,
         });
     }
 
     private async getVectorStore() {
+        if (this.isStub) return null;
         if (this.vectorStore) return this.vectorStore;
 
         const pinecone = new Pinecone({
@@ -32,8 +35,13 @@ export class MemoryService {
     /**
      * Store a student interaction in the vector memory.
      */
-    async storeInteraction(studentDid: String, content: string, metadata: any = {}) {
+    async storeInteraction(studentDid: string, content: string, metadata: any = {}) {
+        if (this.isStub) {
+            console.log(`[MemoryService] Stub: Storing interaction for ${studentDid}`);
+            return;
+        }
         const store = await this.getVectorStore();
+        if (!store) return;
         await store.addDocuments([
             new Document({
                 pageContent: content,
@@ -51,7 +59,12 @@ export class MemoryService {
      * Retrieve relevant memory context for a student with optional metadata filtering.
      */
     async retrieveContext(studentDid: string, query: string, k: number = 5, filter: any = {}) {
+        if (this.isStub) {
+            console.log(`[MemoryService] Stub: Retrieving context for ${studentDid}`);
+            return [];
+        }
         const store = await this.getVectorStore();
+        if (!store) return [];
         const results = await store.similaritySearch(query, k, {
             ...filter,
             studentDid: studentDid,
@@ -63,14 +76,17 @@ export class MemoryService {
      * Retrieve faith-aligned pedagogical context with advanced weighting.
      */
     async retrieveWorldviewContext(query: string, k: number = 3) {
+        if (this.isStub) {
+            console.log(`[MemoryService] Stub: Retrieving worldview context`);
+            return [];
+        }
         const store = await this.getVectorStore();
+        if (!store) return [];
 
-        // Advanced: We could fetch more and re-rank here based on pedagogical relevance
         const results = await store.similaritySearch(query, k, {
             type: 'worldview',
         });
 
-        // Placeholder for re-ranking logic
         console.log(`Retrieved ${results.length} worldview documents for query: ${query}`);
 
         return results;

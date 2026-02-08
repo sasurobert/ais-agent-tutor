@@ -1,30 +1,38 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  previewFeatures = ["driverAdapters", "multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
+  schemas  = ["tutor"]
 }
 
 model StudentState {
-  id           String   @id @default(uuid())
-  studentDid   String   @unique
-  currentQuest String?
-  helpClickCount Int    @default(0)
-  lastHelpAt   DateTime?
-  mode         String   @default("ASSISTANT") // ASSISTANT, TEACHER
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String    @id @default(uuid())
+  studentDid       String    @unique @map("student_did")
+  currentQuest     String?   @map("current_quest")
+  helpClickCount   Int       @default(0) @map("help_click_count")
+  lastHelpAt       DateTime? @map("last_help_at")
+  mode             String    @default("ASSISTANT") // ASSISTANT, TEACHER, SOCRATIC
+  gritScore        Float     @default(1.0) @map("grit_score")
+  traits           Json?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@schema("tutor")
+  @@map("student_state")
 }
 
 model Trait {
-  id         String   @id @default(uuid())
-  studentDid String
-  name       String   // resilience, curiosity, grit, etc.
-  value      Float    @default(0.0)
-  evidence   String?  // Brief note on why this value changed
-  updatedAt  DateTime @updatedAt
+  id          String   @id @default(uuid())
+  studentDid  String   @map("student_did")
+  name        String
+  value       Float    @default(0.0)
+  evidence    String?
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@unique([studentDid, name])
+  @@schema("tutor")
+  @@map("trait")
 }
