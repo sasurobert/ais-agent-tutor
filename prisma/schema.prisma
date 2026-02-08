@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model StudentState {
+  id           String   @id @default(uuid())
+  studentDid   String   @unique
+  currentQuest String?
+  helpClickCount Int    @default(0)
+  lastHelpAt   DateTime?
+  mode         String   @default("ASSISTANT") // ASSISTANT, TEACHER
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Trait {
+  id         String   @id @default(uuid())
+  studentDid String
+  name       String   // resilience, curiosity, grit, etc.
+  value      Float    @default(0.0)
+  evidence   String?  // Brief note on why this value changed
+  updatedAt  DateTime @updatedAt
+
+  @@unique([studentDid, name])
+}
