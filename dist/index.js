@@ -1,69 +1,35 @@
-"use strict";
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
 // src/index.ts
-var index_exports = {};
-__export(index_exports, {
-  default: () => index_default
-});
-module.exports = __toCommonJS(index_exports);
-var import_express = __toESM(require("express"), 1);
-var import_cors = __toESM(require("cors"), 1);
-var import_helmet = __toESM(require("helmet"), 1);
-var import_dotenv = __toESM(require("dotenv"), 1);
-var import_client = require("@prisma/client");
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import dotenv from "dotenv";
+import { PrismaClient } from "@prisma/client";
 
 // src/agents/TutorAgent.ts
-var import_langgraph = require("@langchain/langgraph");
-var import_messages = require("@langchain/core/messages");
-var import_openai2 = require("@langchain/openai");
+import { StateGraph, END, START } from "@langchain/langgraph";
+import { HumanMessage } from "@langchain/core/messages";
+import { ChatOpenAI } from "@langchain/openai";
 
 // src/services/MemoryService.ts
-var import_pinecone = require("@pinecone-database/pinecone");
-var import_pinecone2 = require("@langchain/pinecone");
-var import_openai = require("@langchain/openai");
-var import_documents = require("@langchain/core/documents");
+import { Pinecone } from "@pinecone-database/pinecone";
+import { PineconeStore } from "@langchain/pinecone";
+import { OpenAIEmbeddings } from "@langchain/openai";
+import { Document } from "@langchain/core/documents";
 var MemoryService = class {
   vectorStore = null;
   embeddings;
   constructor() {
-    this.embeddings = new import_openai.OpenAIEmbeddings({
+    this.embeddings = new OpenAIEmbeddings({
       openAIApiKey: process.env.OPENAI_API_KEY
     });
   }
   async getVectorStore() {
     if (this.vectorStore) return this.vectorStore;
-    const pinecone = new import_pinecone.Pinecone({
+    const pinecone = new Pinecone({
       apiKey: process.env.PINECONE_API_KEY
     });
     const index = pinecone.Index(process.env.PINECONE_INDEX);
-    this.vectorStore = await import_pinecone2.PineconeStore.fromExistingIndex(this.embeddings, {
+    this.vectorStore = await PineconeStore.fromExistingIndex(this.embeddings, {
       pineconeIndex: index
     });
     return this.vectorStore;
@@ -74,7 +40,7 @@ var MemoryService = class {
   async storeInteraction(studentDid, content, metadata = {}) {
     const store = await this.getVectorStore();
     await store.addDocuments([
-      new import_documents.Document({
+      new Document({
         pageContent: content,
         metadata: {
           ...metadata,
@@ -110,31 +76,31 @@ var MemoryService = class {
 };
 
 // src/services/ActionService.ts
-var import_tools = require("@langchain/core/tools");
-var import_zod = require("zod");
-var import_tavily = require("@langchain/tavily");
+import { DynamicTool, DynamicStructuredTool } from "@langchain/core/tools";
+import { z } from "zod";
+import { TavilySearch } from "@langchain/tavily";
 var ActionService = class {
   /**
    * Get the set of tools available to the tutor.
    */
   static getTools() {
-    const searchTool = new import_tavily.TavilySearch({
+    const searchTool = new TavilySearch({
       apiKey: process.env.TAVILY_API_KEY,
       maxResults: 3
     });
-    const appNavigationTool = new import_tools.DynamicStructuredTool({
+    const appNavigationTool = new DynamicStructuredTool({
       name: "navigate_to_quest",
       description: "Navigates the student to a specific quest or course page.",
-      schema: import_zod.z.object({
-        path: import_zod.z.string().describe("The URL path to navigate to, e.g. /quests/123"),
-        reason: import_zod.z.string().describe("The pedagogical reason for this navigation")
+      schema: z.object({
+        path: z.string().describe("The URL path to navigate to, e.g. /quests/123"),
+        reason: z.string().describe("The pedagogical reason for this navigation")
       }),
       func: async ({ path, reason }) => {
         console.log(`Navigating to ${path}. Reason: ${reason}`);
         return `Successfully triggered navigation to ${path}`;
       }
     });
-    const progressCheckTool = new import_tools.DynamicTool({
+    const progressCheckTool = new DynamicTool({
       name: "check_student_progress",
       description: "Checks the completion status of current quests for the student.",
       func: async () => {
@@ -146,30 +112,17 @@ var ActionService = class {
 };
 
 // src/agents/TutorAgent.ts
-var import_prebuilt = require("@langchain/langgraph/prebuilt");
+import { ToolExecutor } from "@langchain/langgraph/prebuilt";
 var TutorAgent = class {
   graph;
   llm;
   memory;
   toolExecutor;
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY || "";
-    this.llm = new import_openai2.ChatOpenAI({
-      modelName: "gpt-4o",
-      streaming: true,
-      openAIApiKey: apiKey === "sk-test-key" ? "fake-key" : apiKey
-    });
-    if (apiKey === "sk-test-key") {
-      const originalInvoke = this.llm.invoke.bind(this.llm);
-      this.llm.invoke = async (input) => {
-        const content = "I can help you with that! The Nehemiah quest is about rebuilding the walls of Jerusalem. What have you learned so far about his first steps?";
-        return new import_messages.AIMessageChunk({ content });
-      };
-      this.llm.bindTools = () => this.llm;
-    }
+    this.llm = new ChatOpenAI({ modelName: "gpt-4o", streaming: true });
     this.memory = new MemoryService();
-    this.toolExecutor = new import_prebuilt.ToolExecutor({ tools: ActionService.getTools() });
-    const workflow = new import_langgraph.StateGraph({
+    this.toolExecutor = new ToolExecutor({ tools: ActionService.getTools() });
+    const workflow = new StateGraph({
       channels: {
         messages: {
           reducer: (x, y) => x.concat(y),
@@ -192,14 +145,14 @@ var TutorAgent = class {
     workflow.addNode("contextCollation", this.contextCollation.bind(this));
     workflow.addNode("agent", this.callModel.bind(this));
     workflow.addNode("action", this.callTool.bind(this));
-    workflow.addEdge(import_langgraph.START, "contextCollation");
+    workflow.addEdge(START, "contextCollation");
     workflow.addEdge("contextCollation", "agent");
     workflow.addConditionalEdges(
       "agent",
       this.shouldContinue.bind(this),
       {
         "continue": "action",
-        "end": import_langgraph.END
+        "end": END
       }
     );
     workflow.addEdge("action", "agent");
@@ -235,7 +188,7 @@ ${state.context.memory}
 
 You have tools to search the internet and navigate the app. Use them if needed to help the student decide.`;
     const response = await this.llm.bindTools(ActionService.getTools()).invoke([
-      new import_messages.HumanMessage(systemPrompt),
+      new HumanMessage(systemPrompt),
       ...state.messages
     ]);
     return { messages: [response] };
@@ -261,7 +214,7 @@ You have tools to search the internet and navigate the app. Use them if needed t
 };
 
 // src/services/TelemetryBridge.ts
-var import_node_fetch = __toESM(require("node-fetch"), 1);
+import fetch from "node-fetch";
 var TelemetryBridge = class {
   teacherServiceUrl;
   constructor() {
@@ -272,7 +225,7 @@ var TelemetryBridge = class {
    */
   async notifyTeacher(studentDid, teacherDid, state) {
     try {
-      const response = await (0, import_node_fetch.default)(`${this.teacherServiceUrl}/events/telemetry`, {
+      const response = await fetch(`${this.teacherServiceUrl}/events/telemetry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentDid, teacherDid, state })
@@ -374,26 +327,21 @@ ${traits.map((t) => `- **${t.name}**: ${t.value.toFixed(2)} (${t.evidence || "No
 };
 
 // src/index.ts
-var import_messages2 = require("@langchain/core/messages");
-var import_morgan = __toESM(require("morgan"), 1);
-var import_pg = __toESM(require("pg"), 1);
-var import_adapter_pg = require("@prisma/adapter-pg");
-import_dotenv.default.config();
-var app = (0, import_express.default)();
-app.use((0, import_morgan.default)("dev"));
-var pool = new import_pg.default.Pool({ connectionString: process.env.DATABASE_URL });
-pool.on("connect", (client) => {
-  client.query("SET search_path TO tutor");
-});
-var adapter = new import_adapter_pg.PrismaPg(pool);
-var prisma = new import_client.PrismaClient({ adapter });
+import { HumanMessage as HumanMessage2 } from "@langchain/core/messages";
+import pg from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
+dotenv.config();
+var app = express();
+var pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+var adapter = new PrismaPg(pool);
+var prisma = new PrismaClient({ adapter });
 var port = process.env.PORT || 3006;
 var tutorAgent = new TutorAgent();
 var eventSubscriber = new EventSubscriber(prisma);
 var reportingService = new ReportingService(prisma);
-app.use((0, import_helmet.default)());
-app.use((0, import_cors.default)());
-app.use(import_express.default.json());
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
 app.get("/health", (req, res) => {
   res.json({ status: "healthy", service: "ais-agent-tutor" });
 });
@@ -413,7 +361,7 @@ app.post("/chat", async (req, res) => {
     });
     const result = await tutorAgent.run(
       studentDid,
-      [new import_messages2.HumanMessage(message)],
+      [new HumanMessage2(message)],
       state?.mode || "ASSISTANT"
     );
     const responseContent = result.messages[result.messages.length - 1].content;
@@ -439,3 +387,6 @@ if (process.env.NODE_ENV !== "test") {
   });
 }
 var index_default = app;
+export {
+  index_default as default
+};

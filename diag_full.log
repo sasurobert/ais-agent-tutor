@@ -1,0 +1,41 @@
+[dotenv@17.2.4] injecting env (6) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+Starting diagnostic...
+Using hardcoded URL: postgresql://admin:admin@localhost:5432/aischoolos?schema=tutor&connection_limit=5
+Pool created
+Adapter created
+Prisma client initialized
+Attempting simple query...
+Query failed: PrismaClientKnownRequestError: 
+Invalid `any).studentState.count()` invocation in
+/Users/user/TheAISchoolOS/ais-agent-tutor/diag.ts:21:59
+
+  18 
+  19 try {
+  20     console.log('Attempting simple query...');
+→ 21     const result = await (prisma as any).studentState.count(
+The table `public.StudentState` does not exist in the current database.
+    at Vr.handleRequestError (/Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/client/src/runtime/RequestHandler.ts:228:13)
+    at Vr.handleAndLogRequestError (/Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/client/src/runtime/RequestHandler.ts:174:12)
+    at Vr.request (/Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/client/src/runtime/RequestHandler.ts:143:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async a (/Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/client/src/runtime/getPrismaClient.ts:805:24)
+    at async main (/Users/user/TheAISchoolOS/ais-agent-tutor/diag.ts:21:24) {
+  code: 'P2021',
+  meta: {
+    modelName: 'StudentState',
+    driverAdapterError: DriverAdapterError: TableDoesNotExist
+        at PrismaPgAdapter.onError (file:///Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/adapter-pg/dist/index.mjs:651:11)
+        at PrismaPgAdapter.performIO (file:///Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/adapter-pg/dist/index.mjs:646:12)
+        at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at async PrismaPgAdapter.queryRaw (file:///Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/adapter-pg/dist/index.mjs:566:30)
+        at async e.interpretNode (/Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/client-engine-runtime/src/interpreter/query-interpreter.ts:182:26)
+        at async e.interpretNode (/Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/client-engine-runtime/src/interpreter/query-interpreter.ts:209:41)
+        at async e.interpretNode (/Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/client-engine-runtime/src/interpreter/query-interpreter.ts:268:41)
+        at async e.run (/Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/client-engine-runtime/src/interpreter/query-interpreter.ts:93:23)
+        at async e.execute (/Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/client/src/runtime/core/engines/client/LocalExecutor.ts:81:12)
+        at async Dt.request (/Users/user/TheAISchoolOS/ais-agent-tutor/node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:461:22) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.3.0'
+}

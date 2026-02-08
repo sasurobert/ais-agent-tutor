@@ -7,6 +7,7 @@ import { TutorAgent } from './agents/TutorAgent.js';
 import { EventSubscriber } from './services/EventSubscriber.js';
 import { ReportingService } from './services/ReportingService.js';
 import { HumanMessage } from '@langchain/core/messages';
+import morgan from 'morgan';
 
 import pg from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -14,8 +15,12 @@ import { PrismaPg } from '@prisma/adapter-pg';
 dotenv.config();
 
 const app = express();
+app.use(morgan('dev'));
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+pool.on('connect', (client) => {
+    client.query('SET search_path TO tutor');
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 

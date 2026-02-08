@@ -1,0 +1,2 @@
+[dotenv@17.2.4] injecting env (6) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+PersonalAITutor Service running on port 3006

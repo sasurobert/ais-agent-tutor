@@ -1,0 +1,6 @@
+
+> ais-agent-tutor@1.0.0 dev
+> tsx watch src/index.ts
+
+[dotenv@17.2.4] injecting env (6) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+PersonalAITutor Service running on port 3006
