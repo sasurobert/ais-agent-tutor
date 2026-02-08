@@ -48,7 +48,6 @@ describe('MemoryService', () => {
         const studentDid = 'did:example:123';
         const query = 'What did I ask before?';
 
-        // Seed some mock results
         const mockResults = [new Document({ pageContent: 'Previous question', metadata: { studentDid } })];
         const store = await (memoryService as any).getVectorStore();
         store.similaritySearch.mockResolvedValue(mockResults);
@@ -57,5 +56,19 @@ describe('MemoryService', () => {
 
         expect(results).toHaveLength(1);
         expect(results[0].pageContent).toBe('Previous question');
+    });
+
+    it('should retrieve faith-aligned worldview context', async () => {
+        const query = 'topic: grit';
+        const mockWorldview = [new Document({ pageContent: 'Nehemiah content', metadata: { type: 'worldview' } })];
+
+        const store = await (memoryService as any).getVectorStore();
+        store.similaritySearch.mockResolvedValue(mockWorldview);
+
+        const results = await memoryService.retrieveWorldviewContext(query);
+
+        expect(results).toHaveLength(1);
+        expect(results[0].pageContent).toBe('Nehemiah content');
+        expect(store.similaritySearch).toHaveBeenCalledWith(query, 3, { type: 'worldview' });
     });
 });

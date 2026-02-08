@@ -67,8 +67,9 @@ export class TutorAgent {
         const lastMessage = state.messages[state.messages.length - 1];
         const content = typeof lastMessage.content === 'string' ? lastMessage.content : "";
 
-        const memoryContext = await this.memory.retrieveContext(state.studentDid, content);
-        const worldviewContext = await this.memory.retrieveWorldviewContext(content);
+        // Enhanced RAG: Retrieve both student history and pedagogical worldview context
+        const memoryContext = await this.memory.retrieveContext(state.studentDid, content, 5);
+        const worldviewContext = await this.memory.retrieveWorldviewContext(content, 3);
 
         return {
             context: {

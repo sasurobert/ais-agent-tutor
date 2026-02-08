@@ -1,10 +1,13 @@
 import { PrismaClient } from '@prisma/client';
+import { TelemetryBridge } from './TelemetryBridge.js';
 
 export class EventSubscriber {
     private prisma: PrismaClient;
+    private bridge: TelemetryBridge;
 
     constructor(prisma: PrismaClient) {
         this.prisma = prisma;
+        this.bridge = new TelemetryBridge();
     }
 
     /**
@@ -43,6 +46,10 @@ export class EventSubscriber {
                 data: { mode: 'TEACHER' },
             });
             console.log(`Student ${studentDid} switched to TEACHER mode due to help abuse.`);
+
+            // Notify Teacher Service (Telemetry Bridge)
+            // In a real scenario, we'd look up the teacher for this student
+            await this.bridge.notifyTeacher(studentDid, 'teacher-456', state);
         }
     }
 
