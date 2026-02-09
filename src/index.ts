@@ -8,6 +8,7 @@ import { EventSubscriber } from './services/EventSubscriber.js';
 import { ReportingService } from './services/ReportingService.js';
 import { HumanMessage } from '@langchain/core/messages';
 import morgan from 'morgan';
+import conductorRoutes from './routes/conductor.routes.js';
 
 import pg from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -33,6 +34,7 @@ const reportingService = new ReportingService(prisma);
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use('/conductor', conductorRoutes);
 
 app.get('/health', (req: Request, res: Response) => {
     res.json({ status: 'healthy', service: 'ais-agent-tutor' });
