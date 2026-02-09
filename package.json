@@ -7,13 +7,19 @@
     "start": "tsup src/index.ts --onSuccess \"node dist/index.js\"",
     "dev": "tsx watch src/index.ts",
     "test": "vitest",
-    "build": "tsup src/index.ts"
+    "build": "tsup src/index.ts",
+    "demo:seed": "dotenv -e ../../.env.demo -- tsx src/scripts/seed-demo.ts",
+    "demo:assets": "dotenv -e ../../.env.demo -- tsx src/scripts/generate-assets.ts",
+    "demo:audio": "dotenv -e ../../.env.demo -- tsx src/scripts/generate-audio.ts",
+    "demo:comics": "dotenv -e ../../.env.demo -- tsx src/scripts/generate-comic-panels.ts",
+    "demo:pipeline": "dotenv -e ../../.env.demo -- tsx src/scripts/run-demo-pipeline.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@google/genai": "^1.40.0",
     "@langchain/community": "^1.1.12",
     "@langchain/core": "^1.1.19",
     "@langchain/langgraph": "^1.1.4",
@@ -36,6 +42,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
     "@types/morgan": "^1.9.10",
     "@types/node": "^25.2.2",
     "@types/pg": "^8.16.0",
@@ -43,6 +50,7 @@
     "@vitest/coverage-v8": "^4.0.18",
     "prisma": "^7.3.0",
     "supertest": "^7.2.2",
+    "ts-jest": "^29.4.6",
     "ts-node-dev": "^2.0.0",
     "tsup": "^8.5.1",
     "tsx": "^4.19.2",
