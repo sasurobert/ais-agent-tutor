@@ -3,7 +3,7 @@
  * Master Demo Orchestrator
  *
  * Runs all demo generation scripts in the correct order:
- * 1. PDF → Markdown (Marker)
+ * 1. OpenStax → Markdown (Web Scraping)
  * 2. Markdown → SCDS JSON (Gemini)
  * 3. Comic panel images (Gemini Image Gen)
  * 4. Podcast audio (Gemini TTS)
@@ -13,11 +13,10 @@
  *   npx dotenv -e ../../.env.demo -- npx ts-node src/scripts/run-demo-pipeline.ts
  *
  * Options:
- *   --skip-pdf          Skip PDF conversion (use existing Marker output)
  *   --skip-scds         Skip SCDS generation (use existing JSON)
  *   --skip-images       Skip image generation
  *   --skip-audio        Skip audio generation
- *   --only=<stage>      Run only one stage: pdf|scds|images|audio|comics
+ *   --only=<stage>      Run only one stage: ingest|scds|images|audio|comics
  */
 
 import { execSync } from 'node:child_process';
@@ -30,7 +29,6 @@ const ENV_FILE = path.resolve(ROOT, '../../.env.demo');
 
 // Parse command line args
 const args = process.argv.slice(2);
-const skipPdf = args.includes('--skip-pdf');
 const skipScds = args.includes('--skip-scds');
 const skipImages = args.includes('--skip-images');
 const skipAudio = args.includes('--skip-audio');
@@ -74,7 +72,6 @@ async function main(): Promise<void> {
 
     console.log('📋 Configuration:');
     console.log(`   ENV file:    ${fs.existsSync(ENV_FILE) ? '✅ Found' : '❌ Missing'}`);
-    console.log(`   Skip PDF:    ${skipPdf}`);
     console.log(`   Skip SCDS:   ${skipScds}`);
     console.log(`   Skip Images: ${skipImages}`);
     console.log(`   Skip Audio:  ${skipAudio}`);
@@ -82,10 +79,9 @@ async function main(): Promise<void> {
     console.log();
 
     const stages = [
-        { name: 'pdf', label: 'Stage 1: PDF Ingestion (Marker)', script: 'seed-demo.ts', skip: skipPdf || skipScds },
-        { name: 'scds', label: 'Stage 2: SCDS Content Generation (Gemini)', script: 'seed-demo.ts', skip: skipScds },
-        { name: 'images', label: 'Stage 3: Visual Asset Generation (Gemini Image)', script: 'generate-assets.ts', skip: skipImages },
-        { name: 'comics', label: 'Stage 4: Comic Panel Generation (Gemini Image)', script: 'generate-comic-panels.ts', skip: skipImages },
+        { name: 'ingest', label: 'Stage 1: OpenStax Ingestion + SCDS Generation', script: 'seed-demo.ts', skip: skipScds },
+        { name: 'images', label: 'Stage 2: Visual Asset Generation (Gemini Image)', script: 'generate-assets.ts', skip: skipImages },
+        { name: 'comics', label: 'Stage 3: Comic Panel Generation (Gemini Image)', script: 'generate-comic-panels.ts', skip: skipImages },
         { name: 'audio', label: 'Stage 5: Audio Generation (Gemini TTS)', script: 'generate-audio.ts', skip: skipAudio },
     ];
 

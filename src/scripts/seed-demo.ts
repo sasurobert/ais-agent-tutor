@@ -3,6 +3,7 @@
  * Demo Seed Script
  *
  * Runs the full ingestion + SCDS generation pipeline for all 3 OpenStax books.
+ * Uses the OpenStax web scraper (no PDF/Marker dependency).
  * Outputs JSON data files ready for the demo.
  *
  * Usage:
@@ -11,20 +12,19 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { GeminiClient } from '../lib/GeminiClient';
-import { IngestionService } from '../services/IngestionService';
-import { ScdsGenerator } from '../services/scds/ScdsGenerator';
-import { Course, Module } from '../services/scds/types';
+import { GeminiClient } from '../lib/GeminiClient.js';
+import { IngestionService } from '../services/IngestionService.js';
+import { ScdsGenerator } from '../services/scds/ScdsGenerator.js';
+import { Course, Module } from '../services/scds/types.js';
 
 // ─── Configuration ────────────────────────────────────
 
 const DATA_DIR = process.env.DATA_FOR_DEMO_PATH || '/Users/user/TheAISchoolOS/ais-specs/data_for_demo';
 const OUTPUT_DIR = path.join(DATA_DIR, 'scds_output');
-const MARKER_VENV = process.env.MARKER_VENV_PATH || '/Users/user/TheAISchoolOS/.venv-marker';
-const MARKER_OUTPUT = path.join(DATA_DIR, 'marker_output');
 
 interface BookConfig {
-    pdfFile: string;
+    /** OpenStax book slug (e.g. "prealgebra-2e") or full URL */
+    openstaxBook: string;
     courseName: string;
     subject: Course['subject'];
     gradeRange: [number, number];
@@ -36,7 +36,7 @@ interface BookConfig {
 
 const BOOKS: BookConfig[] = [
     {
-        pdfFile: 'Prealgebra2e-WEB_0qbw93r.pdf',
+        openstaxBook: 'prealgebra-2e',
         courseName: 'Prealgebra 2e',
         subject: 'math',
         gradeRange: [6, 8],
@@ -47,7 +47,7 @@ const BOOKS: BookConfig[] = [
         ],
     },
     {
-        pdfFile: 'Biology2e-WEB.pdf',
+        openstaxBook: 'biology-2e',
         courseName: 'Biology 2e',
         subject: 'science',
         gradeRange: [9, 10],
@@ -58,7 +58,7 @@ const BOOKS: BookConfig[] = [
         ],
     },
     {
-        pdfFile: 'US_History_-_WEB.pdf',
+        openstaxBook: 'us-history',
         courseName: 'US History',
         subject: 'history',
         gradeRange: [8, 12],
@@ -74,6 +74,7 @@ const BOOKS: BookConfig[] = [
 
 async function seedDemo(): Promise<void> {
     console.log('🎯 TheAISchoolOS Demo Seed Script');
+    console.log('   (OpenStax Web Scraper — no PDF/Marker required)');
     console.log('='.repeat(60));
 
     // Ensure output directory exists
@@ -91,8 +92,7 @@ async function seedDemo(): Promise<void> {
     });
 
     const ingestion = new IngestionService({
-        markerVenvPath: MARKER_VENV,
-        outputDir: MARKER_OUTPUT,
+        outputDir: path.join(DATA_DIR, 'openstax_output'),
     });
 
     const generator = new ScdsGenerator({
@@ -106,40 +106,20 @@ async function seedDemo(): Promise<void> {
     for (const book of BOOKS) {
         console.log(`\n${'='.repeat(60)}`);
         console.log(`📖 Processing: ${book.courseName}`);
+        console.log(`   Source: OpenStax ${book.openstaxBook}`);
         console.log(`${'='.repeat(60)}`);
 
-        const pdfPath = path.join(DATA_DIR, book.pdfFile);
-        if (!fs.existsSync(pdfPath)) {
-            console.error(`  ❌ PDF not found: ${pdfPath}`);
-            continue;
-        }
+        // Step 1: Ingest from OpenStax (disk-first, then live scrape)
+        const result = await ingestion.ingest(
+            book.openstaxBook,
+            book.courseName,
+            book.selectedChapters.map(c => c.chapterNumber),
+        );
 
-        // Step 1: Check if Marker output already exists (skip conversion if so)
-        const pdfName = path.basename(pdfPath, path.extname(pdfPath));
-        const existingMdDir = path.join(MARKER_OUTPUT, pdfName);
-        let markdownPath: string;
-
-        if (fs.existsSync(existingMdDir)) {
-            const mdFiles = fs.readdirSync(existingMdDir).filter(f => f.endsWith('.md'));
-            if (mdFiles.length > 0) {
-                markdownPath = path.join(existingMdDir, mdFiles[0]);
-                console.log(`  ♻️ Using existing Marker output: ${markdownPath}`);
-            } else {
-                const result = await ingestion.ingest(pdfPath, book.courseName);
-                markdownPath = result.rawMarkdownPath;
-            }
-        } else {
-            const result = await ingestion.ingest(pdfPath, book.courseName);
-            markdownPath = result.rawMarkdownPath;
-        }
-
-        // Step 2: Split into chapters
-        const chapters = ingestion.splitChapters(markdownPath);
-
-        // Step 3: Filter to selected chapters
+        // Step 2: Match chapters to quest titles
         const selectedChapters = book.selectedChapters
             .map(sel => {
-                const chapter = chapters.find(c => c.chapterNumber === sel.chapterNumber);
+                const chapter = result.chapters.find(c => c.chapterNumber === sel.chapterNumber);
                 if (!chapter) {
                     console.warn(`  ⚠️ Chapter ${sel.chapterNumber} not found, skipping`);
                     return null;
@@ -150,7 +130,7 @@ async function seedDemo(): Promise<void> {
 
         console.log(`  📚 Found ${selectedChapters.length}/${book.selectedChapters.length} selected chapters`);
 
-        // Step 4: Generate SCDS for each selected chapter
+        // Step 3: Generate SCDS for each selected chapter
         const modules: Partial<Module>[] = [];
 
         for (const { chapter, questTitle } of selectedChapters) {
@@ -168,25 +148,19 @@ async function seedDemo(): Promise<void> {
             }
         }
 
-        // Step 5: Assemble course object
+        // Step 4: Assemble course object
         const course: Partial<Course> = {
             id: book.subject,
             title: book.courseName,
             subject: book.subject,
-            sourceBook: book.pdfFile,
+            sourceBook: book.openstaxBook,
             gradeRange: book.gradeRange,
             modules: modules as Module[],
-            metadata: {
-                authors: ['OpenStax'],
-                license: 'CC-BY 4.0',
-                sourceUrl: `https://openstax.org/details/books/${book.courseName.toLowerCase().replace(/\s+/g, '-')}`,
-                totalPages: 0,
-                chaptersExtracted: chapters.length,
-            },
+            metadata: result.metadata,
             createdAt: new Date().toISOString(),
         };
 
-        // Step 6: Save SCDS JSON output
+        // Step 5: Save SCDS JSON output
         const outputPath = path.join(OUTPUT_DIR, `${book.subject}_course.json`);
         fs.writeFileSync(outputPath, JSON.stringify(course, null, 2));
         console.log(`\n  💾 Saved: ${outputPath}`);
