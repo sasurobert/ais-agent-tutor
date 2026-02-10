@@ -94,7 +94,9 @@ export class GeminiClient {
      * Generate an image using Gemini Nano Banana
      */
     async generateImage(options: GenerateImageOptions): Promise<string> {
-        const config: Record<string, unknown> = {};
+        const config: Record<string, unknown> = {
+            responseModalities: ['IMAGE', 'TEXT'],
+        };
         if (options.aspectRatio) config.aspectRatio = options.aspectRatio;
 
         const response = await this.ai.models.generateContent({
