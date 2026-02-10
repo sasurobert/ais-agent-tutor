@@ -341,11 +341,38 @@ export class IngestionService {
     }
 
     /**
+     * Find the textbooks directory by searching upward from outputDir for ais-assets/textbooks/.
+     * Supports TEXTBOOKS_DIR env var override.
+     */
+    private findTextbooksDir(bookSlug: string): string {
+        // Environment variable override
+        if (process.env.TEXTBOOKS_DIR) {
+            return path.join(process.env.TEXTBOOKS_DIR, bookSlug);
+        }
+
+        // Search upward from outputDir for ais-assets/textbooks/
+        let searchDir = path.resolve(this.outputDir);
+        for (let i = 0; i < 6; i++) {
+            const candidate = path.join(searchDir, 'ais-assets', 'textbooks', bookSlug);
+            if (fs.existsSync(candidate)) {
+                return candidate;
+            }
+            const parent = path.dirname(searchDir);
+            if (parent === searchDir) break; // reached root
+            searchDir = parent;
+        }
+
+        // Fallback: relative to outputDir (legacy behavior)
+        return path.join(path.dirname(path.dirname(this.outputDir)), 'ais-assets', 'textbooks', bookSlug);
+    }
+
+    /**
      * Ingest from pre-scraped markdown files on disk (from scrape-openstax.py or previous runs).
      * Searches for combined chapter files in the textbooks directory.
      */
     ingestFromDisk(bookSlug: string, chapterNumbers: number[]): ChapterExtract[] {
-        const textbooksDir = path.join(path.dirname(path.dirname(this.outputDir)), 'ais-assets', 'textbooks', bookSlug);
+        // Resolve textbooks directory: env var > search upward from outputDir for ais-assets/textbooks/
+        const textbooksDir = this.findTextbooksDir(bookSlug);
         const chapters: ChapterExtract[] = [];
 
         if (!fs.existsSync(textbooksDir)) {
